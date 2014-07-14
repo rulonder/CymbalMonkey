@@ -86,37 +86,12 @@ void serialEvent() {
 
 // translates the string into an integer
 int StringtoInt (String inputString) {
-  int pos = SingleStringtoInt(inputString.substring(0,1));
-  pos = pos*10 + SingleStringtoInt(inputString.substring(1,2));
-  pos = pos*10 + SingleStringtoInt(inputString.substring(2,3));
-  pos = pos*10 + SingleStringtoInt(inputString.substring(3)); 
+  char subString[4];
+  int pos;
+  inputString.substring(0,3).toCharArray(subString,4) ;
+  sprintf(subString, "%i", pos);
+
   return pos;
 }
 
-// parses each character
-int SingleStringtoInt (String input) {
-
-   if ( input.equals( "1") ) {
-   return 1;
-   }else if ( input.equals( "2") ) {
-   return 2;
-   }else if ( input.equals( "3") ) {
-   return 3;
-   } else if ( input.equals( "4") ) {
-   return 4;
-   } else if ( input.equals( "5") ) {
-   return 5;
-   } else if ( input.equals( "6") ) {
-   return 6;
-   } else if ( input.equals( "7") ) {
-   return 7;
-   } else if ( input.equals( "8") ) {
-   return 8;
-   }  else if ( input.equals( "9") ) {
-   return 9;
-   } else {
-   return 0;
-   };
-      
-  }
 
