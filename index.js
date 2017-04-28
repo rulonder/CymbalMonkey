@@ -75,7 +75,7 @@ function validatePetition (petition_date) {
   // must not be older than 2 seconds
   const notOld = (Math.abs(secsFromNowCorrected(petition_date)) < 2)
   // must be at least 1 second between petitions
-  const niceRatio = secsBetween(STATE.lasPetition, petition_date) > 1
+  const niceRatio = secsBetween(STATE.lasPetition, petition_date) > 0.5
   // operated at an apporpiate time so no one is waken up
   const appropiateTime = petition_date.getHours() > 7 && petition_date.getHours() < 20
   return (notOld && niceRatio && appropiateTime)
@@ -174,8 +174,18 @@ function init_app () {
 
   function getMeasurementsTemp(cb){
     db.serialize(()=>{
-    db.all('SELECT * FROM meas WHERE type is "Temperature" ORDER BY date DESC LIMIT 800 ', function (err, data) {
+    db.all('SELECT * FROM meas WHERE type is "Temperature" ORDER BY date DESC LIMIT 600 ', function (err, data) {
       //  example { timestamp: 12312321, name: 'fdsf', value: 5456 }
+      cb(null, data)
+    })
+    
+    })
+  }
+
+  function getScores(cb){
+    db.serialize(()=>{
+    db.all('SELECT COUNT(by) as count, by FROM petitions GROUP BY by', function (err, data) {
+      //  example {  by: 'fdsf', count: 5456 }
       cb(null, data)
     })
     
@@ -196,6 +206,8 @@ app.post('/login',function (req, res) {
 app.get('/api/run', function (req, res) {
     const petition_date = new Date()
     var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.ip
+    // clean ip address
+    ip = ip.replace('::ffff:','')
     console.log('petition at :' + petition_date + ' by '+ip)
     if (validatePetition(petition_date)) {
       STATE.lasPetition = petition_date
@@ -205,15 +217,21 @@ app.get('/api/run', function (req, res) {
       console.log('rejected petition')
       res.sendStatus(404)
     }
-     dns.reverse(ip,(err,a)=>{console.log('petition by :' + a)/*addPetition(a[0])*/})
+     dns.reverse(ip,(err,a)=>{console.log('petition by :' + a);addPetition(a[0])})
 })
 
 app.get('/api/temp', function (req, res) {
   getMeasurementsTemp((err, meas)=>{
     res.json({'data': meas})
   })
-
 })
+
+app.get('/api/scores', function (req, res) {
+  getScores((err, scores)=>{
+    res.json({'data': scores})
+  })
+})
+
   // handle received data on serial port
   port.on('data', function (data) {
     parseMeasurements(data, (err, data) => {
