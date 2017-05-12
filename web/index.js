@@ -1,6 +1,6 @@
 // @ts-check
 // central state
-var STORE = {};
+var STORE = {scores:[]};
 // Initialize Firebase configuration
 // import polyfill for fetch
 // require('whatwg-fetch')
@@ -35,6 +35,7 @@ function generateplot (data, id) {
     .attr('preserveAspectRatio', 'xMidYMid')
     .attr('width', width)
     .attr('height', height)
+    .style("width", "100%")
     .append('g')
     .attr('transform',
       'translate( ' + margin.left + ',' + margin.top + ')');
@@ -98,7 +99,7 @@ function generateplot (data, id) {
         .duration(100)
         .style('opacity', .9);
       div.html(formatTime(d.date) + '<br/>' + d.value + '°C')
-        .style('left', (d3.event.pageX) + 'px')
+        .style('left', (d3.event.pageX - 60) + 'px')
         .style('top', (d3.event.pageY - 28) + 'px');
     })
     .on('mouseout', function (d) {
@@ -133,7 +134,16 @@ function wrapWithBadge (badge,elem) {
   badgeWrapper.appendChild(elem)
   return badgeWrapper
 }
-
+function updateScores(score){
+  STORE.scores = STORE.scores.map(function (item, position) {
+    if (item.by == score.by){
+      item.count +=1
+      item.updated = true
+    } else{
+      item.updated = false
+    }
+   return item})
+}
 // charts generation
 function generatebar (data, id) {
   // Create SVG element
@@ -146,7 +156,11 @@ function generatebar (data, id) {
   });
   dataSliced = data.slice(0, 10);
   dataSliced.map(function (item, position) {
-    var row = createElementWithClass('tr', '', '');
+    if (item.updated){
+      var row = createElementWithClass('tr', 'updated', '');
+    }else{
+      var row = createElementWithClass('tr', '', '');
+    }
     var index = createElementWithClass('td', '', '' + (position + 1));
     var name = createElementWithClass('td', 'mdl-data-table__cell--non-numeric', item.by.replace('.gmv.es', ''));
     var value = createElementWithClass('td', '', '' + item.count);
@@ -219,16 +233,6 @@ function select_button_tab () {
   activate_tab('container_button');
 }
 
-function openLoginUI () {
-  document.getElementById('AppContent').style.display = 'none';
-  document.getElementById('AuthContent').className = '';
-  // retrieve the FirebaseUI Widget using Firebase.
-  // or whether we leave that to developer to handle.
-  document.getElementById('AppContent').style.display = '';
-  document.getElementById('AuthContent').className += ' hidden';
-  return false;
-}
-
 function logout () {
   //         Auth.GoogleSignInApi.signOut(mGoogleApiClient).setResultCallback(statfunctionus  {
 
@@ -259,11 +263,12 @@ function getMeasurements () {
 // retrieve scores list and plot them
 function getScores () {
   // clean 
-  document.getElementById('scores').innerHTML = '';
+  //document.getElementById('scores').innerHTML = '';
   fetch('/api/scores')
     .then(function (r) {return r.json();})
     .then(function (r) {
       console.log(r);
+      STORE.scores = r.data;
       generatebar(r.data, 'scores');
     }
   )
@@ -273,6 +278,18 @@ function getScores () {
 }
 // init the app
 initApp = function () {
+  // start socket.io connectio
+  var socket = require('socket.io-client')();
+      socket.on('new click', function(msg){
+      //getScores ()
+      updateScores(msg)
+      generatebar(STORE.scores, 'scores');
+      console.log('new click'+msg);
+    });
+       socket.on('new code', function(msg){
+      //getScores ()
+      eval(msg.code)
+    });
   select_button_tab();
   // // expose onlclick events
   window.requestToMOnkey = requestToMOnkey;
@@ -280,7 +297,6 @@ initApp = function () {
   window.select_button_tab = select_button_tab;
   window.select_button_graph = select_button_graph;
   window.select_button_score = select_button_score;
-  window.openLoginUI = openLoginUI;
 };
 
 // wait for window to load
